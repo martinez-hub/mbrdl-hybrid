@@ -56,7 +56,8 @@ python -m core.train \
   --train-data-dir ./datasets/cure_tsr/raw_data \
   --source-of-nat-var snow \
   --model-paths ./models/cure-tsr-snow.pt \
-  --architecture resnet18 \
+  --architecture basic \
+  --num-classes 14 \
   --mdat -k 10 --T 10
 
 # MRAT: Worst-of-k initialization + gradient refinement
@@ -65,7 +66,8 @@ python -m core.train \
   --train-data-dir ./datasets/cure_tsr/raw_data \
   --source-of-nat-var snow \
   --model-paths ./models/cure-tsr-snow.pt \
-  --architecture resnet18 \
+  --architecture basic \
+  --num-classes 14 \
   --mrat -k 10 --T 10
 ```
 
