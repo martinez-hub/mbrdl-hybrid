@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 def mda_train(images, target, model, G, args):
     """Model-based Data Augmentation training algorithm.
-    
+
     Params:
         images: Batch of training imagse.
         target: Labels corresponding to training batch.
@@ -15,22 +15,23 @@ def mda_train(images, target, model, G, args):
         Images and target augmented with model-based data.
     """
 
+    device = images.device
     all_mb_images = [images]
 
     for _ in range(args.k):
         with torch.no_grad():
-            delta = torch.rand(images.size(0), args.delta_dim, 1, 1).cuda()
+            delta = torch.rand(images.size(0), args.delta_dim, 1, 1).to(device)
             mb_images = G(images, delta)
             all_mb_images.append(mb_images)
 
-    images = torch.cat(all_mb_images, dim=0).cuda()
+    images = torch.cat(all_mb_images, dim=0).to(device)
     target = torch.cat([target for _ in range(len(all_mb_images))])
 
     return images, target
 
 def mrt_train(images, target, model, criterion, G, args):
     """Model-based Robust Training training algorithm.
-    
+
     Params:
         images: Batch of training imagse.
         target: Labels corresponding to training batch.
@@ -43,11 +44,12 @@ def mrt_train(images, target, model, criterion, G, args):
         Images and target augmented with model-based data.
     """
 
-    max_loss, worst_imgs = torch.tensor(0.0).cuda(), None
+    device = images.device
+    max_loss, worst_imgs = torch.tensor(0.0).to(device), None
 
     for _ in range(args.k):
         with torch.no_grad():
-            delta = torch.rand(images.size(0), args.delta_dim, 1, 1).cuda()
+            delta = torch.rand(images.size(0), args.delta_dim, 1, 1).to(device)
             mb_images = G(images, delta)
             mb_output = model(mb_images)
             mb_loss = criterion(mb_output, target)
@@ -55,14 +57,14 @@ def mrt_train(images, target, model, criterion, G, args):
                 worst_imgs = mb_images
                 max_loss = mb_loss
 
-    images = torch.cat([images, worst_imgs.cuda()], dim=0)
+    images = torch.cat([images, worst_imgs.to(device)], dim=0)
     target = torch.cat([target, target])
 
     return images, target
 
 def mat_train(images, target, model, criterion, G, args, alpha=0.1):
     """Model-based Adversarial Training training algorithm.
-    
+
     Params:
         images: Batch of training imagse.
         target: Labels corresponding to training batch.
@@ -76,7 +78,8 @@ def mat_train(images, target, model, criterion, G, args, alpha=0.1):
         Images and target augmented with model-based data.
     """
 
-    adv_delta = torch.zeros(images.size(0), args.delta_dim, 1, 1).cuda()
+    device = images.device
+    adv_delta = torch.zeros(images.size(0), args.delta_dim, 1, 1).to(device)
     adv_delta.requires_grad_(True)
     for _ in range(args.k):
         mb_images = G(images, adv_delta)
@@ -88,7 +91,7 @@ def mat_train(images, target, model, criterion, G, args, alpha=0.1):
 
     adv_delta = adv_delta.detach().requires_grad_(False)
     mb_images = G(images, adv_delta)
-    images = torch.cat([images, mb_images.cuda()], dim=0)
+    images = torch.cat([images, mb_images.to(device)], dim=0)
     target = torch.cat([target, target])
 
     return images, target
