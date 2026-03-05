@@ -247,6 +247,115 @@ The script will generate:
 - **Paired t-test**: When same seeds used across algorithms (higher statistical power)
 - **ANOVA**: Initial test to check if any algorithm differs (before pairwise tests)
 
+## Testing & Validation
+
+### Unit Tests
+
+Run unit tests for hybrid algorithms:
+
+```bash
+python tests/test_hybrid_algorithms.py
+```
+
+**Tests included:**
+- MDAT shape validation
+- MRAT shape validation
+- Loss maximization behavior
+- Algorithm complexity verification
+
+### Smoke Tests
+
+Run comprehensive end-to-end integration tests:
+
+```bash
+python tests/smoke_test.py
+```
+
+**Tests included:**
+- All 5 algorithms (MDA, MRT, MAT, MDAT, MRAT) training steps
+- Full training loop with optimizer
+- Evaluation mode with ECE computation
+- Metrics validation (ECE, MRR)
+- Hyperparameter variations (k, T)
+- Gradient flow verification
+- CPU/GPU device compatibility
+
+**Expected output:**
+```
+============================================================
+Running MBRDL Hybrid Algorithms Smoke Tests
+============================================================
+
+1. Algorithm Training Tests:
+  Testing MDA... ✓
+  Testing MRT... ✓
+  Testing MAT... ✓
+  Testing MDAT... ✓
+  Testing MRAT... ✓
+
+✅ All smoke tests passed!
+```
+
+### Performance Benchmarks
+
+Measure performance improvements from optimizations:
+
+```bash
+python tests/benchmark_optimizations.py
+```
+
+**Benchmarks:**
+- Training algorithm speed (ms/iteration)
+- Throughput (samples/second)
+- Memory usage (GPU/CPU)
+- Speedup comparisons (original vs optimized)
+
+**Expected output:**
+```
+Algorithm: MDAT
+  Original:  88.45 ms/iter, 362 samples/sec
+  Optimized: 84.32 ms/iter, 380 samples/sec
+  Speedup:   1.05x
+```
+
+### Statistical Analysis Examples
+
+Run interactive statistical analysis examples:
+
+```bash
+python examples/statistical_analysis_example.py
+```
+
+**Examples demonstrated:**
+- Welch's t-test with p-value matrix
+- Paired t-test for matched seeds
+- ANOVA for multiple algorithms
+- Multi-seed aggregation with 95% CI
+- Publication-ready comparison tables
+
+## Documentation
+
+### Available Documentation Files
+
+- **README.md** (this file): Quick start, API reference, statistical analysis
+- **HYBRID_ALGORITHMS.md**: Detailed algorithm descriptions and complexity analysis
+- **IMPLEMENTATION_SUMMARY.md**: Complete implementation overview
+- **VERIFICATION.md**: Test verification report
+- **OPTIMIZATIONS.md**: Performance optimization details and benchmarks
+
+### Quick Links
+
+```bash
+# View algorithm documentation
+cat HYBRID_ALGORITHMS.md
+
+# View optimization details
+cat OPTIMIZATIONS.md
+
+# View verification report
+cat VERIFICATION.md
+```
+
 ## Original Citation
 
 ```latex
