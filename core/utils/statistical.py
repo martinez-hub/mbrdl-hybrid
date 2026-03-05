@@ -55,7 +55,11 @@ def aggregate_seed_results(result_dirs: List[str], metric: str = 'top1') -> Dict
 
 
 def pairwise_t_tests(algorithm_results: Dict[str, List[float]], use_welch: bool = True) -> pd.DataFrame:
-    """Perform pairwise t-tests between algorithms.
+    """Perform pairwise t-tests between algorithms (optimized).
+
+    Optimization:
+    - Pre-allocate with diagonal=1
+    - Only compute upper triangle (symmetry)
 
     Args:
         algorithm_results: Dict mapping algorithm to list of values (one per seed)
@@ -72,19 +76,19 @@ def pairwise_t_tests(algorithm_results: Dict[str, List[float]], use_welch: bool 
     algorithms = list(algorithm_results.keys())
     n = len(algorithms)
 
-    p_values = np.zeros((n, n))
+    # Pre-allocate with diagonal=1 (optimized)
+    p_values = np.eye(n)
 
-    for i, alg1 in enumerate(algorithms):
-        for j, alg2 in enumerate(algorithms):
-            if i == j:
-                p_values[i, j] = 1.0
-            else:
-                _, p = stats.ttest_ind(
-                    algorithm_results[alg1],
-                    algorithm_results[alg2],
-                    equal_var=not use_welch  # Welch's test when equal_var=False
-                )
-                p_values[i, j] = p
+    # Only compute upper triangle, copy to lower (symmetry optimization)
+    for i in range(n):
+        for j in range(i + 1, n):
+            _, p = stats.ttest_ind(
+                algorithm_results[algorithms[i]],
+                algorithm_results[algorithms[j]],
+                equal_var=not use_welch
+            )
+            p_values[i, j] = p
+            p_values[j, i] = p  # Symmetry
 
     df = pd.DataFrame(p_values, index=algorithms, columns=algorithms)
     return df
