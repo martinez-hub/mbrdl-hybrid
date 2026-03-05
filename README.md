@@ -1,8 +1,11 @@
 # MBRDL-Hybrid: Enhanced Model-Based Robust Deep Learning
 
+**Josué Martínez-Martínez, Olivia Brown, Giselle Zeno, Pooya Khorrami, Rajmonda Caceres**
+
 Extended implementation of [MBRDL](https://github.com/arobey1/mbrdl) with novel hybrid training algorithms, comprehensive statistical analysis, and performance optimizations.
 
-**Paper**: ["From Snow to Rain: Evaluating Robustness, Calibration, and Complexity of Model-Based Robust Training"](https://arxiv.org/abs/2601.09153) (Martínez-Martínez et al., 2026)
+**Paper**: ["From Snow to Rain: Evaluating Robustness, Calibration, and Complexity of Model-Based Robust Training"](https://arxiv.org/abs/2601.09153)
+**arXiv**: [2601.09153](https://arxiv.org/abs/2601.09153) | **Year**: 2026
 
 ## Key Features
 
