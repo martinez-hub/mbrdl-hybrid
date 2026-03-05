@@ -65,6 +65,188 @@ See [HYBRID_ALGORITHMS.md](HYBRID_ALGORITHMS.md) for detailed documentation.
 - **MRR**: Mean Reciprocal Rank (algorithm ranking)
 - **Training Time**: Wall-clock seconds per epoch
 
+## Statistical Analysis
+
+The repository includes comprehensive statistical testing tools for comparing algorithms across multiple random seeds.
+
+### Welch's T-Test (Recommended)
+
+Welch's t-test doesn't assume equal variances, making it ideal for comparing different training algorithms:
+
+```python
+from core.utils.statistical import welch_test
+
+# Results from multiple seeds for each algorithm
+algorithm_results = {
+    'mda': [0.56, 0.57, 0.55],   # 3 seeds
+    'mrt': [0.58, 0.59, 0.57],   # 3 seeds
+    'mdat': [0.59, 0.60, 0.58],  # 3 seeds
+    'mrat': [0.60, 0.61, 0.59]   # 3 seeds
+}
+
+# Perform pairwise Welch's t-tests
+p_values = welch_test(algorithm_results)
+print(p_values)
+```
+
+Output:
+```
+        mda      mrt     mdat     mrat
+mda     1.0   0.0234   0.0089   0.0045
+mrt   0.0234   1.0    0.1234   0.0567
+mdat  0.0089  0.1234   1.0     0.2345
+mrat  0.0045  0.0567  0.2345    1.0
+```
+
+### Paired T-Test
+
+Use this when comparing two algorithms trained with the **same random seeds**:
+
+```python
+from core.utils.statistical import paired_t_test
+
+# Same seeds used for both algorithms
+mdat_results = [0.59, 0.60, 0.58, 0.61, 0.60]
+mrat_results = [0.60, 0.61, 0.59, 0.62, 0.61]
+
+t_stat, p_value = paired_t_test(mdat_results, mrat_results)
+print(f"t-statistic: {t_stat:.4f}, p-value: {p_value:.4f}")
+
+if p_value < 0.05:
+    print("MRAT significantly outperforms MDAT (p < 0.05)")
+else:
+    print("No significant difference between MDAT and MRAT")
+```
+
+### ANOVA Test
+
+Test if there are significant differences among multiple algorithms:
+
+```python
+from core.utils.statistical import anova_test
+
+algorithm_results = {
+    'erm': [0.28, 0.27, 0.29],
+    'mda': [0.56, 0.57, 0.55],
+    'mrt': [0.58, 0.59, 0.57],
+    'mat': [0.61, 0.62, 0.60],
+    'mdat': [0.59, 0.60, 0.58],
+    'mrat': [0.60, 0.61, 0.59]
+}
+
+f_stat, p_value = anova_test(algorithm_results)
+print(f"F-statistic: {f_stat:.4f}, p-value: {p_value:.6f}")
+
+if p_value < 0.05:
+    print("Significant differences exist among algorithms")
+```
+
+### Multi-Seed Aggregation
+
+Aggregate results with confidence intervals:
+
+```python
+from core.utils.statistical import aggregate_seed_results
+
+# Assuming results are saved in separate directories
+result_dirs = [
+    'results/mrat_snow/seed_42',
+    'results/mrat_snow/seed_43',
+    'results/mrat_snow/seed_44'
+]
+
+# Aggregate accuracy results
+stats = aggregate_seed_results(result_dirs, metric='top1')
+print(f"Mean: {stats['mean']:.3f}")
+print(f"Std:  {stats['std']:.3f}")
+print(f"95% CI: [{stats['ci_lower']:.3f}, {stats['ci_upper']:.3f}]")
+```
+
+Output:
+```
+Mean: 60.300
+Std:  0.500
+95% CI: [59.183, 61.417]
+```
+
+### Complete Statistical Analysis Example
+
+Full workflow for comparing algorithms across multiple seeds:
+
+```python
+from core.utils.statistical import (
+    aggregate_seed_results,
+    welch_test,
+    anova_test,
+    generate_comparison_table
+)
+
+# 1. Collect results from all algorithms and seeds
+algorithms = ['mda', 'mrt', 'mat', 'mdat', 'mrat']
+all_results = {}
+
+for alg in algorithms:
+    result_dirs = [f'results/{alg}/seed_{s}' for s in [42, 43, 44]]
+    all_results[alg] = aggregate_seed_results(result_dirs, metric='top1')
+
+# 2. Perform ANOVA
+f_stat, p_value = anova_test({
+    alg: stats['values'] for alg, stats in all_results.items()
+})
+print(f"ANOVA: F={f_stat:.2f}, p={p_value:.6f}")
+
+# 3. Pairwise Welch's t-tests
+p_values = welch_test({
+    alg: stats['values'] for alg, stats in all_results.items()
+})
+print("\nPairwise p-values:")
+print(p_values)
+
+# 4. Generate comparison table
+df = generate_comparison_table(
+    all_results,
+    metrics=['accuracy', 'ece'],
+    output_path='results/comparison_table.tex'
+)
+print("\nComparison Table:")
+print(df)
+```
+
+### Using the Analysis Script
+
+For automated analysis after multi-seed experiments:
+
+```bash
+# Run multi-seed experiment
+python scripts/run_multi_seed.py \
+  --seeds 42,43,44,45,46 \
+  --output results/mrat_snow \
+  --args --mrat -k 10 --T 10
+
+# Analyze results
+python scripts/analyze_results.py \
+  --results results/mrat_snow/seed_* \
+  --metric top1 \
+  --output analysis/mrat_snow
+```
+
+The script will generate:
+- `aggregated_results.json` with mean, std, and 95% CI
+- Statistical summary printed to console
+
+### Interpretation Guidelines
+
+**P-value interpretation:**
+- p < 0.001: Very strong evidence of difference (***)
+- p < 0.01: Strong evidence of difference (**)
+- p < 0.05: Moderate evidence of difference (*)
+- p ≥ 0.05: No significant difference (n.s.)
+
+**When to use each test:**
+- **Welch's t-test**: Default choice for pairwise comparisons (doesn't assume equal variances)
+- **Paired t-test**: When same seeds used across algorithms (higher statistical power)
+- **ANOVA**: Initial test to check if any algorithm differs (before pairwise tests)
+
 ## Original Citation
 
 ```latex
