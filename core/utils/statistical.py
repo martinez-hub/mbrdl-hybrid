@@ -54,14 +54,20 @@ def aggregate_seed_results(result_dirs: List[str], metric: str = 'top1') -> Dict
     }
 
 
-def pairwise_t_tests(algorithm_results: Dict[str, List[float]]) -> pd.DataFrame:
+def pairwise_t_tests(algorithm_results: Dict[str, List[float]], use_welch: bool = True) -> pd.DataFrame:
     """Perform pairwise t-tests between algorithms.
 
     Args:
         algorithm_results: Dict mapping algorithm to list of values (one per seed)
+        use_welch: If True, use Welch's t-test (unequal variances). Default: True.
 
     Returns:
         DataFrame with p-values for all pairs
+
+    Note:
+        Welch's t-test (use_welch=True) does not assume equal variances and is
+        generally more robust. Set use_welch=False for Student's t-test which
+        assumes equal variances.
     """
     algorithms = list(algorithm_results.keys())
     n = len(algorithms)
@@ -75,12 +81,57 @@ def pairwise_t_tests(algorithm_results: Dict[str, List[float]]) -> pd.DataFrame:
             else:
                 _, p = stats.ttest_ind(
                     algorithm_results[alg1],
-                    algorithm_results[alg2]
+                    algorithm_results[alg2],
+                    equal_var=not use_welch  # Welch's test when equal_var=False
                 )
                 p_values[i, j] = p
 
     df = pd.DataFrame(p_values, index=algorithms, columns=algorithms)
     return df
+
+
+def welch_test(algorithm_results: Dict[str, List[float]]) -> pd.DataFrame:
+    """Perform pairwise Welch's t-tests between algorithms.
+
+    Welch's t-test does not assume equal variances and is more robust than
+    Student's t-test for comparing algorithms with potentially different
+    variance characteristics.
+
+    Args:
+        algorithm_results: Dict mapping algorithm to list of values (one per seed)
+
+    Returns:
+        DataFrame with p-values for all pairs
+
+    Note:
+        This is equivalent to pairwise_t_tests with use_welch=True.
+    """
+    return pairwise_t_tests(algorithm_results, use_welch=True)
+
+
+def paired_t_test(alg1_results: List[float], alg2_results: List[float]) -> Tuple[float, float]:
+    """Perform paired t-test between two algorithms.
+
+    Use this when comparing two algorithms that were run with the same random seeds
+    (paired observations).
+
+    Args:
+        alg1_results: Results from algorithm 1 (one value per seed)
+        alg2_results: Results from algorithm 2 (one value per seed, same seeds as alg1)
+
+    Returns:
+        Tuple of (t-statistic, p-value)
+
+    Example:
+        >>> mdat_results = [0.59, 0.60, 0.58]  # 3 seeds
+        >>> mrat_results = [0.60, 0.61, 0.59]  # same 3 seeds
+        >>> t_stat, p_value = paired_t_test(mdat_results, mrat_results)
+    """
+    if len(alg1_results) != len(alg2_results):
+        raise ValueError("Paired t-test requires equal number of observations")
+
+    t_stat, p_value = stats.ttest_rel(alg1_results, alg2_results)
+    return t_stat, p_value
 
 
 def anova_test(algorithm_results: Dict[str, List[float]]) -> Tuple[float, float]:
