@@ -24,15 +24,21 @@ def get_parser():
                             help='Path to the MUNIT config file.')
     
     # training algorithms
-    parser.add_argument('--mrt', action='store_true', 
+    parser.add_argument('--mrt', action='store_true',
                             help='Run Model-based Robust Training (MRT-k) with k = args.k')
-    parser.add_argument('--mda', action='store_true', 
+    parser.add_argument('--mda', action='store_true',
                             help='Run Model-based Data Augmentation (MDA-k) with k = args.k')
-    parser.add_argument('--mat', action='store_true', 
+    parser.add_argument('--mat', action='store_true',
                             help='RUN Model-based Adversarial Training (MAT-k) with k = args.k')
-    parser.add_argument('-k', default=1, type=int, 
+    parser.add_argument('--mdat', action='store_true',
+                            help='Run MDAT (MDA→MAT hybrid) training with T = args.T gradient steps')
+    parser.add_argument('--mrat', action='store_true',
+                            help='Run MRAT (MRT→MAT hybrid) training with k samples and T = args.T gradient steps')
+    parser.add_argument('-k', default=1, type=int,
                             help='Hyperparameter k for model-based training')
-    parser.add_argument('--pgd', action='store_true', 
+    parser.add_argument('--T', default=None, type=int,
+                            help='Number of gradient steps for MAT/MDAT/MRAT (default: uses k if not specified)')
+    parser.add_argument('--pgd', action='store_true',
                             help='Run PGD algorithm with default alpha = 0.01, epsilon = 8/255, n_steps = 20')
     
     # optimization settings and training parameters

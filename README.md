@@ -1,6 +1,71 @@
-# Model-Based Robust Deep Learning (MBRDL)
+# MBRDL: Model-Based Robust Deep Learning (Extended)
 
-In this repository, we include the code necessary for reproducing the code used in [Model-Based Robust Deep Learning](https://arxiv.org/abs/2005.10247).  In particular, we include the code necessary for both training models of natural variation as well as the code needed to train classifiers using these learned models.  A brief summary of the functionality provided in this repo is provided below in the table of contents.  If you find this repository useful in your research, please consider citing:
+This repository extends the original [MBRDL](https://github.com/arobey1/mbrdl) with novel hybrid training algorithms from ["From Snow to Rain: Evaluating Robustness, Calibration, and Complexity of Model-Based Robust Training"](https://arxiv.org/abs/2601.09153).
+
+## New Features ✨
+
+- **MDAT (MDA→MAT)**: Random initialization + gradient refinement
+- **MRAT (MRT→MAT)**: Worst-of-k initialization + gradient refinement
+- **Enhanced Metrics**: ECE (calibration), MRR (ranking), training time
+- **Statistical Analysis**: Multi-seed experiments, t-tests, confidence intervals
+- **Comprehensive Documentation**: Algorithm comparisons, usage guides, troubleshooting
+
+## Quick Start
+
+### Train with MRAT on CURE-TSR
+
+```bash
+# Train with MRAT hybrid algorithm
+python -m core.train \
+  --dataset cure-tsr \
+  --train-data-dir ./datasets/cure_tsr/raw_data \
+  --source-of-nat-var snow \
+  --model-paths ./core/models/learned_models/cure-tsr-snow.pt \
+  --architecture resnet18 \
+  --mrat -k 10 --T 10
+```
+
+### Multi-Seed Experiments
+
+```bash
+python scripts/run_multi_seed.py \
+  --script train_basic.sh \
+  --seeds 42,43,44 \
+  --output results/mrat_snow
+```
+
+### Analyze Results
+
+```bash
+python scripts/analyze_results.py \
+  --results results/mrat_snow/seed_* \
+  --metric top1 \
+  --output analysis/mrat_snow
+```
+
+## Algorithms
+
+See [HYBRID_ALGORITHMS.md](HYBRID_ALGORITHMS.md) for detailed documentation.
+
+**Base algorithms (from original MBRDL):**
+- **ERM**: Standard training
+- **MDA**: Random augmentation (Θ(1))
+- **MRT**: Worst-of-k selection (Θ(k))
+- **MAT**: Gradient-based adversarial (Θ(T))
+- **PGD**: Pixel-space adversarial
+
+**New hybrid algorithms:**
+- **MDAT**: Combines MDA initialization with MAT refinement (Θ(T))
+- **MRAT**: Combines MRT initialization with MAT refinement (Θ(k+T))
+
+## Evaluation Metrics
+
+- **Accuracy**: Top-1 classification accuracy
+- **ECE**: Expected Calibration Error (10 bins)
+- **MRR**: Mean Reciprocal Rank (algorithm ranking)
+- **Training Time**: Wall-clock seconds per epoch
+
+## Original Citation
 
 ```latex
 @article{robey2020model,
@@ -10,6 +75,23 @@ In this repository, we include the code necessary for reproducing the code used 
   year={2020}
 }
 ```
+
+## Extension Citation
+
+```latex
+@article{martinez2026snow,
+  title={From Snow to Rain: Evaluating Robustness, Calibration, and Complexity of Model-Based Robust Training},
+  author={Mart{\'\i}nez-Mart{\'\i}nez, Josu{\'e} and Brown, Olivia and Zeno, Giselle and Khorrami, Pooya and Caceres, Rajmonda},
+  journal={arXiv preprint arXiv:2601.09153},
+  year={2026}
+}
+```
+
+---
+
+## Original MBRDL Documentation
+
+In this repository, we include the code necessary for reproducing the code used in [Model-Based Robust Deep Learning](https://arxiv.org/abs/2005.10247).  In particular, we include the code necessary for both training models of natural variation as well as the code needed to train classifiers using these learned models.  A brief summary of the functionality provided in this repo is provided below in the table of contents.
 
 ## Table of contents
 

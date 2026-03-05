@@ -119,6 +119,12 @@ def train(trn_loader, model, criterion, optimizer, scheduler, epoch, G, args):
         elif args.mat is True:
             imgs, target = mat_train(imgs, target, model, criterion, G, args)
 
+        elif args.mdat is True:
+            imgs, target = mdat_train(imgs, target, model, criterion, G, args)
+
+        elif args.mrat is True:
+            imgs, target = mrat_train(imgs, target, model, criterion, G, args)
+
         elif args.pgd is True:
             imgs, target = pgd_train(imgs, target, model, criterion)
 
@@ -176,7 +182,7 @@ def train(trn_loader, model, criterion, optimizer, scheduler, epoch, G, args):
 
 def validate(val_loader, model, criterion, epoch, start_time):
     """Run the validation set through a trained classifier.
-    
+
     Params:
         val_loader: Loader for validation set.
         model: Classifier instance.
@@ -193,6 +199,9 @@ def validate(val_loader, model, criterion, epoch, start_time):
     model.eval()
     eval_start_time = time.time()
 
+    # Collect predictions for ECE
+    all_probs = []
+    all_labels = []
 
     for i, (imgs,target) in enumerate(val_loader):
 
@@ -206,10 +215,15 @@ def validate(val_loader, model, criterion, epoch, start_time):
 
         if args.distributed:
             top1acc, top5acc, loss, batch_total = distributed_predict(imgs, target, model, criterion)
+            # Note: ECE computation not fully supported in distributed mode
         else:
             with torch.no_grad():
                 output = model(imgs)
                 loss = criterion(output, target).data
+                # Store predictions for ECE
+                probs = torch.nn.functional.softmax(output, dim=1)
+                all_probs.append(probs.cpu().numpy())
+                all_labels.append(target.cpu().numpy())
             batch_total = imgs.size(0)
             top1acc, top5acc = accuracy(output.data, target, topk=(1,5))
 
@@ -227,7 +241,19 @@ def validate(val_loader, model, criterion, epoch, start_time):
                       f'Acc@5 {top5.val:.3f} ({top5.avg:.3f})')
             log.verbose(output)
 
-    tb.log_eval(top1.avg, top5.avg, time.time()-eval_start_time)
+    # Compute ECE if we have predictions
+    ece = 0.0
+    if len(all_probs) > 0 and not args.distributed:
+        import numpy as np
+        from utils.metrics import compute_ece
+        all_probs = np.concatenate(all_probs)
+        all_labels = np.concatenate(all_labels)
+        ece = compute_ece(all_labels, all_probs)
+        tb.log('eval/ece', ece)
+
+    epoch_time = time.time() - eval_start_time
+    tb.log_eval(top1.avg, top5.avg, epoch_time)
+    tb.log('eval/epoch_time', epoch_time)
     tb.log('epoch', epoch)
 
     return top1.avg, top5.avg
