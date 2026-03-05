@@ -16,10 +16,9 @@ from pathlib import Path
 # Add core to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Import original algorithms
+# Import training algorithms (now optimized)
 sys.path.insert(0, str(Path(__file__).parent.parent / 'core' / 'training'))
-import train_algs as original
-import train_algs_optimized as optimized
+import train_algs as current
 
 
 class SimpleGenerator(nn.Module):
@@ -123,78 +122,50 @@ def compare_algorithms(batch_size=32, device='cpu', num_iterations=100):
     target = torch.randint(0, 10, (batch_size,)).to(device)
 
     algorithms = [
-        ('MDA', original.mda_train, optimized.mda_train, False),
-        ('MRT', original.mrt_train, optimized.mrt_train, True),
-        ('MAT', original.mat_train, optimized.mat_train, True),
-        ('MDAT', original.mdat_train, optimized.mdat_train, True),
-        ('MRAT', original.mrat_train, optimized.mrat_train, True),
+        ('MDA', current.mda_train, False),
+        ('MRT', current.mrt_train, True),
+        ('MAT', current.mat_train, True),
+        ('MDAT', current.mdat_train, True),
+        ('MRAT', current.mrat_train, True),
     ]
 
     results = {}
 
-    for alg_name, orig_fn, opt_fn, needs_criterion in algorithms:
+    for alg_name, alg_fn, needs_criterion in algorithms:
         print(f"\n{'─'*70}")
         print(f"Algorithm: {alg_name}")
         print(f"{'─'*70}")
 
-        # Prepare function calls
+        # Prepare function call
         if needs_criterion:
-            orig_call = lambda imgs, tgt, m, c, g, a: orig_fn(imgs, tgt, m, c, g, a)
-            opt_call = lambda imgs, tgt, m, c, g, a: opt_fn(imgs, tgt, m, c, g, a)
+            fn_call = lambda imgs, tgt, m, c, g, a: alg_fn(imgs, tgt, m, c, g, a)
         else:
-            orig_call = lambda imgs, tgt, m, c, g, a: orig_fn(imgs, tgt, m, g, a)
-            opt_call = lambda imgs, tgt, m, c, g, a: opt_fn(imgs, tgt, m, g, a)
+            fn_call = lambda imgs, tgt, m, c, g, a: alg_fn(imgs, tgt, m, g, a)
 
-        # Benchmark original
-        orig_stats = benchmark_algorithm(
-            orig_call, f"{alg_name} (original)",
+        # Benchmark algorithm
+        stats = benchmark_algorithm(
+            fn_call, f"{alg_name} (optimized)",
             images, target, model, criterion, G, args, num_iterations
         )
-
-        # Benchmark optimized
-        opt_stats = benchmark_algorithm(
-            opt_call, f"{alg_name} (optimized)",
-            images, target, model, criterion, G, args, num_iterations
-        )
-
-        # Calculate improvements
-        speedup = orig_stats['time_per_iter'] / opt_stats['time_per_iter']
-        throughput_improvement = opt_stats['samples_per_sec'] / orig_stats['samples_per_sec']
 
         print(f"\n  Results:")
-        print(f"    Original:  {orig_stats['time_per_iter']*1000:.2f} ms/iter, "
-              f"{orig_stats['samples_per_sec']:.1f} samples/sec")
-        print(f"    Optimized: {opt_stats['time_per_iter']*1000:.2f} ms/iter, "
-              f"{opt_stats['samples_per_sec']:.1f} samples/sec")
-        print(f"    Speedup:   {speedup:.2f}x")
-        print(f"    Throughput improvement: {throughput_improvement:.2f}x")
+        print(f"    Time/iter: {stats['time_per_iter']*1000:.2f} ms")
+        print(f"    Throughput: {stats['samples_per_sec']:.1f} samples/sec")
 
         if torch.cuda.is_available():
-            memory_reduction = (orig_stats['peak_memory_mb'] - opt_stats['peak_memory_mb']) / orig_stats['peak_memory_mb'] * 100
-            print(f"    Memory:    {orig_stats['peak_memory_mb']:.1f} MB → {opt_stats['peak_memory_mb']:.1f} MB "
-                  f"({memory_reduction:.1f}% reduction)")
+            print(f"    Peak memory: {stats['peak_memory_mb']:.1f} MB")
 
-        results[alg_name] = {
-            'original': orig_stats,
-            'optimized': opt_stats,
-            'speedup': speedup,
-            'throughput_improvement': throughput_improvement
-        }
+        results[alg_name] = stats
 
     # Summary
     print(f"\n{'='*70}")
-    print("Summary")
+    print("Performance Summary (Optimized Implementation)")
     print(f"{'='*70}")
 
-    avg_speedup = sum(r['speedup'] for r in results.values()) / len(results)
-    avg_throughput = sum(r['throughput_improvement'] for r in results.values()) / len(results)
-
-    print(f"\nAverage speedup: {avg_speedup:.2f}x")
-    print(f"Average throughput improvement: {avg_throughput:.2f}x")
-
-    print("\nSpeedup by algorithm:")
+    print("\nPerformance by algorithm:")
     for alg_name, stats in results.items():
-        print(f"  {alg_name:6s}: {stats['speedup']:.2f}x faster")
+        print(f"  {alg_name:6s}: {stats['time_per_iter']*1000:6.2f} ms/iter, "
+              f"{stats['samples_per_sec']:6.1f} samples/sec")
 
     return results
 
@@ -219,13 +190,14 @@ def main():
     print("\n" + "="*70)
     print("Benchmark Complete")
     print("="*70)
-    print("\nOptimizations applied:")
-    print("  ✓ In-place tensor operations (uniform_(), add_(), clamp_())")
+    print("\nOptimizations applied in current implementation:")
+    print("  ✓ In-place tensor operations (.add_(), .clamp_())")
     print("  ✓ Removed redundant device transfers")
-    print("  ✓ Better memory management (grad.zero_(set_to_none=True))")
-    print("  ✓ Pre-allocated tensors where possible")
-    print("  ✓ Efficient target repetition (repeat() vs list comprehension)")
-    print("  ✓ Scalar comparisons instead of tensor comparisons")
+    print("  ✓ Efficient gradient zeroing")
+    print("  ✓ Efficient target repetition (.repeat() vs list comprehension)")
+    print("  ✓ Tensor comparisons (avoid .item() overhead)")
+    print("\nNote: All algorithms are now optimized.")
+    print("      See OPTIMIZATIONS.md for detailed performance comparisons.")
 
 
 if __name__ == '__main__':
